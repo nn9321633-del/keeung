@@ -107,7 +107,7 @@
       width: 100%;
       max-height: 520px; /* 얼굴이 더 잘 보이도록 세로를 더 길게 */
       object-fit: cover;
-      object-position: 50% 20%; /* 윗부분(얼굴) 쪽을 더 보여주기 */
+      object-position: 50% 20%; /* 윗부분(얼얼굴) 쪽을 더 보여주기 */
       display: block;
       border-radius: 8px;
     }
@@ -305,11 +305,25 @@
       border-radius: 8px;
       cursor: pointer;
     }
+
+    .hint {
+      margin: 10px 12px 0;
+      padding: 10px 12px;
+      font-size: 12px;
+      color: #7a2a4d;
+      background: rgba(227, 140, 178, 0.12);
+      border: 1px solid rgba(227, 140, 178, 0.25);
+      border-radius: 12px;
+      display: none;
+    }
   </style>
+
+  <!-- ✅ Firebase (compat: 정적 HTML에서 제일 쉬움) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
-  <!-- ✅ JS에서 찾는 id를 실제로 부여 -->
   <div class="container" id="container">
     <header>keeung news</header>
 
@@ -329,7 +343,7 @@
 
       <div class="article-content">
         <figure class="article-figure">
-          <img src="news-photo.jpg" alt="P1Harmony 멤버 화보 이미지" />
+          <img src="./news-photo.jpg" alt="P1Harmony 멤버 화보 이미지" />
           <figcaption>ⓒ ELLE</figcaption>
         </figure>
 
@@ -343,13 +357,12 @@
       </div>
     </article>
 
-    <!-- ✅ JS에서 찾는 id를 실제로 부여 -->
     <div class="dim" id="dim" onclick="closeComments()"></div>
 
     <div class="comment-sheet" id="commentSheet"
          ontouchstart="startDrag(event)" ontouchmove="onDrag(event)" ontouchend="endDrag()">
       <div class="comment-header">
-        <div class="left">댓글 <span id="commentCount">2</span></div>
+        <div class="left">댓글 <span id="commentCount">0</span></div>
         <select id="sortOrder" aria-label="정렬">
           <option value="latest" selected>최신순</option>
           <option value="oldest">오래된순</option>
@@ -363,6 +376,8 @@
         <input id="commentInput" type="text" placeholder="댓글을 입력하세요" />
         <button id="commentSubmit" type="button">등록</button>
       </div>
+
+      <div class="hint" id="hintBox">Firebase/Firestore 연결에 문제가 있어요. (Firestore 규칙/프로젝트 설정 확인)</div>
     </div>
 
     <nav>
@@ -373,7 +388,6 @@
   </div>
 
   <script>
-    // DOM 준비 후 실행 + 전역 함수(window)에 확실히 등록
     (function () {
       const container = document.getElementById('container');
       const badge = document.getElementById('badge');
@@ -421,18 +435,70 @@
         else badge.classList.remove('shrink');
       });
 
-      // ====== Comment System ======
+      // ====== Comment System (Firestore: everyone sees same comments) ======
       const commentList = document.getElementById('commentList');
       const commentCountEl = document.getElementById('commentCount');
       const nicknameInput = document.getElementById('nicknameInput');
       const commentInput = document.getElementById('commentInput');
       const commentSubmit = document.getElementById('commentSubmit');
       const sortOrder = document.getElementById('sortOrder');
+      const hintBox = document.getElementById('hintBox');
 
-      const state = { order: 'latest', comments: [] };
+      // ✅ 특정 닉네임 댓글 숨김(전체 사용자에게 동일 적용)
+      const BLOCKED_NAMES = new Set(['ㅇㅅㅇㄹ', 'ㅍ']);
 
-      function formatRelativeTime(ts) {
-        const diff = Date.now() - ts;
+      const firebaseConfig = {
+        apiKey: "AIzaSyAlm149mupSM70C0gxLOsR9mmwJR9hFaFY",
+        authDomain: "keeping-e4061.firebaseapp.com",
+        projectId: "keeping-e4061",
+        storageBucket: "keeping-e4061.firebasestorage.app",
+        messagingSenderId: "813363352404",
+        appId: "1:813363352404:web:19b0c94d6db781a1fe6ec1"
+      };
+
+      // 내 기기 토큰: 내 댓글만 수정/삭제 버튼 보여주기
+      const AUTHOR_KEY = 'keeung_author_token_v1';
+      const authorToken = (function () {
+        try {
+          const exist = localStorage.getItem(AUTHOR_KEY);
+          if (exist) return exist;
+          const t = `t_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+          localStorage.setItem(AUTHOR_KEY, t);
+          return t;
+        } catch (_) {
+          // (드물게) 프라이빗 모드에서 localStorage가 막힐 때 대비
+          return `t_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+        }
+      })();
+
+      // ✅ Firestore에 authorToken이 저장되지 않았어도(규칙/이전데이터 등)
+      //    내가 작성한 댓글 id를 로컬에 기록해두고 "내 댓글"로 인식하게 하는 안전장치
+      const MY_IDS_KEY = 'keeung_my_comment_ids_v1';
+      const myCommentIds = (function () {
+        try {
+          const raw = localStorage.getItem(MY_IDS_KEY);
+          const arr = raw ? JSON.parse(raw) : [];
+          return new Set(Array.isArray(arr) ? arr : []);
+        } catch (_) {
+          return new Set();
+        }
+      })();
+
+      function persistMyIds() {
+        try {
+          localStorage.setItem(MY_IDS_KEY, JSON.stringify(Array.from(myCommentIds)));
+        } catch (_) {}
+      }
+
+      let db = null;
+      let unsubscribe = null;
+
+      function showHint(show) {
+        hintBox.style.display = show ? 'block' : 'none';
+      }
+
+      function formatRelativeTime(tsMs) {
+        const diff = Date.now() - tsMs;
         const sec = Math.floor(diff / 1000);
         if (sec < 30) return '방금 전';
         if (sec < 60) return '1분 전';
@@ -444,22 +510,28 @@
         return `${day}일 전`;
       }
 
-      function updateCommentCount() {
-        commentCountEl.textContent = String(state.comments.length);
+      function safeTimestampToMs(ts) {
+        if (!ts) return Date.now();
+        try {
+          if (typeof ts.toDate === 'function') return ts.toDate().getTime();
+        } catch (_) {}
+        return Date.now();
       }
 
-      function renderComments() {
+      function setCount(n) {
+        commentCountEl.textContent = String(n);
+      }
+
+      function renderDocs(docs) {
         commentList.innerHTML = '';
 
-        const sorted = [...state.comments].sort((a, b) =>
-          state.order === 'latest' ? (b.ts - a.ts) : (a.ts - b.ts)
-        );
-
-        for (const c of sorted) {
+        docs.forEach((doc) => {
+          const data = doc.data();
+          // ✅ 차단 닉네임 댓글은 목록에서 숨김
+          if (data && typeof data.name === 'string' && BLOCKED_NAMES.has(data.name.trim())) return;
           const item = document.createElement('div');
           item.className = 'comment';
-          item.dataset.id = c.id;
-          item.dataset.ts = String(c.ts);
+          item.dataset.id = doc.id;
 
           const top = document.createElement('div');
           top.className = 'comment-top';
@@ -468,11 +540,14 @@
           meta.className = 'comment-meta';
 
           const name = document.createElement('strong');
-          name.textContent = c.name;
+          name.textContent = data.name || '익명';
 
           const time = document.createElement('span');
           time.className = 'comment-time';
-          time.textContent = formatRelativeTime(c.ts);
+
+          const tsMs = safeTimestampToMs(data.ts);
+          time.textContent = formatRelativeTime(tsMs);
+          item.dataset.tsms = String(tsMs);
 
           meta.appendChild(name);
           meta.appendChild(time);
@@ -480,59 +555,117 @@
           const actions = document.createElement('div');
           actions.className = 'comment-actions';
 
-          const editBtn = document.createElement('button');
-          editBtn.type = 'button';
-          editBtn.dataset.action = 'edit';
-          editBtn.textContent = '수정';
+          const isMine = (data.authorToken && data.authorToken === authorToken) || myCommentIds.has(doc.id);
 
-          const delBtn = document.createElement('button');
-          delBtn.type = 'button';
-          delBtn.dataset.action = 'delete';
-          delBtn.textContent = '삭제';
+          if (isMine) {
+            const delBtn = document.createElement('button');
+            delBtn.type = 'button';
+            delBtn.dataset.action = 'delete';
+            delBtn.textContent = '삭제';
 
-          actions.appendChild(editBtn);
-          actions.appendChild(delBtn);
+            actions.appendChild(delBtn);
+          }
 
           top.appendChild(meta);
           top.appendChild(actions);
 
           const text = document.createElement('div');
           text.className = 'comment-text';
-          text.textContent = c.text;
+          text.textContent = data.text || '';
 
           item.appendChild(top);
           item.appendChild(text);
           commentList.appendChild(item);
+        });
+
+        setCount(docs.length);
+        commentList.scrollTop = (sortOrder.value === 'latest') ? 0 : commentList.scrollHeight;
+      }
+
+      function attachListener() {
+        if (!db) return;
+        if (unsubscribe) unsubscribe();
+
+        const dir = (sortOrder.value === 'latest') ? 'desc' : 'asc';
+
+        // ✅ 기본: ts 기준 정렬 (권장)
+        // ⚠️ 기존 데이터 중 ts 필드가 없는 문서가 있으면 orderBy에서 에러가 날 수 있어서,
+        // 에러가 나면 정렬 없이 받아온 뒤(안전) 클라이언트에서 정렬한다.
+        try {
+          unsubscribe = db.collection('comments')
+            .orderBy('ts', dir)
+            .onSnapshot((snap) => {
+              showHint(false);
+              renderDocs(snap.docs);
+            }, (err) => {
+              console.error(err);
+              // orderBy 실패 시(예: ts 없는 문서) fallback
+              if (unsubscribe) { try { unsubscribe(); } catch (_) {} }
+              unsubscribe = db.collection('comments')
+                .onSnapshot((snap2) => {
+                  showHint(false);
+                  const docs = snap2.docs.slice().sort((a, b) => {
+                    const at = safeTimestampToMs(a.data().ts);
+                    const bt = safeTimestampToMs(b.data().ts);
+                    return (sortOrder.value === 'latest') ? (bt - at) : (at - bt);
+                  });
+                  renderDocs(docs);
+                }, (err2) => {
+                  console.error(err2);
+                  showHint(true);
+                });
+            });
+        } catch (e) {
+          console.error(e);
+          showHint(true);
         }
-
-        updateCommentCount();
-        commentList.scrollTop = (state.order === 'latest') ? 0 : commentList.scrollHeight;
       }
 
-      function seedComments() {
-        state.comments = [
-          { id: 'seed_0', name: '무', text: '두 분의 사랑을 응원합니다!', ts: Date.now() - 2 * 60 * 1000 },
-          { id: 'seed_1', name: '베베', text: '미쳤다.. 기호 지웅 화이팅!', ts: Date.now() - 1 * 60 * 1000 }
-        ];
+      function initFirebase() {
+        try {
+          if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+          db = firebase.firestore();
+          attachListener();
+          showHint(false);
+        } catch (e) {
+          console.error(e);
+          showHint(true);
+        }
       }
 
-      function addComment() {
+      async function addComment() {
         const name = (nicknameInput.value || '').trim() || '익명';
         const text = (commentInput.value || '').trim();
         if (!text) return;
+        if (!db) { showHint(true); return; }
 
-        state.comments.push({
-          id: `c_${Date.now()}_${Math.random().toString(16).slice(2)}`,
-          name,
-          text,
-          ts: Date.now()
-        });
-
-        commentInput.value = '';
-        renderComments();
+        try {
+          const docRef = await db.collection('comments').add({
+            name,
+            text,
+            authorToken,
+            ts: firebase.firestore.FieldValue.serverTimestamp(),
+          });
+          // ✅ 방금 내가 쓴 댓글은 id로도 기억(버튼이 '아예 안 보이는' 문제 방지)
+          if (docRef && docRef.id) {
+            myCommentIds.add(docRef.id);
+            persistMyIds();
+          }
+          commentInput.value = '';
+        } catch (e) {
+          console.error(e);
+          showHint(true);
+        }
       }
 
-      commentList.addEventListener('click', (e) => {
+      // 등록
+      commentSubmit.addEventListener('click', addComment);
+      commentInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') addComment();
+      });
+
+      // 수정/삭제 (내 댓글만 버튼 노출)
+      commentList.addEventListener('click', async (e) => {
         const btn = e.target.closest('button');
         if (!btn) return;
 
@@ -540,88 +673,37 @@
         if (!item) return;
 
         const id = item.dataset.id;
-        const idx = state.comments.findIndex(c => c.id === id);
-        if (idx < 0) return;
+        if (!id || !db) return;
 
         const action = btn.dataset.action;
-        if (action === 'delete') {
-          state.comments.splice(idx, 1);
-          renderComments();
-          return;
-        }
-
-        if (action === 'edit') {
-          const current = state.comments[idx].text;
-          const next = prompt('댓글 수정', current);
-          if (next === null) return;
-          const trimmed = String(next).trim();
-          if (!trimmed) return;
-          state.comments[idx].text = trimmed;
-          renderComments();
+        try {
+          if (action === 'delete') {
+            await db.collection('comments').doc(id).delete();
+            return;
+          }
+        } catch (e2) {
+          console.error(e2);
+          showHint(true);
         }
       });
 
-      sortOrder.addEventListener('change', () => {
-        state.order = sortOrder.value;
-        renderComments();
-      });
+      // 정렬 변경
+      sortOrder.addEventListener('change', attachListener);
 
-      commentSubmit.addEventListener('click', addComment);
-      commentInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') addComment();
-      });
+      // 키보드 올라올 때
+      commentInput.addEventListener('focus', () => { sheet.style.height = '85%'; });
+      commentInput.addEventListener('blur', () => { sheet.style.height = '70%'; });
 
-      commentInput.addEventListener('focus', () => {
-        sheet.style.height = '85%';
-      });
-
-      commentInput.addEventListener('blur', () => {
-        sheet.style.height = '70%';
-      });
-
+      // 시간 표시 업데이트 (30초마다)
       setInterval(() => {
         document.querySelectorAll('.comment').forEach(el => {
-          const ts = Number(el.dataset.ts || 0);
+          const tsMs = Number(el.dataset.tsms || 0);
           const timeEl = el.querySelector('.comment-time');
-          if (timeEl && ts) timeEl.textContent = formatRelativeTime(ts);
+          if (timeEl && tsMs) timeEl.textContent = formatRelativeTime(tsMs);
         });
       }, 30000);
 
-      // ====== Tests (console) ======
-      function runTests() {
-        const results = [];
-        const assert = (name, cond) => results.push({ name, pass: Boolean(cond) });
-
-        assert('#container exists', !!container);
-        assert('#badge exists', !!badge);
-        assert('#dim exists', !!dim);
-        assert('openComments defined', typeof window.openComments === 'function');
-        assert('closeComments defined', typeof window.closeComments === 'function');
-
-        // seed + render
-        const before = state.comments.length;
-        seedComments();
-        renderComments();
-        assert('seedComments adds 2', state.comments.length === 2);
-
-        // addComment increases count
-        nicknameInput.value = '닉네임 입력';
-        commentInput.value = '테스트 댓글';
-        addComment();
-        assert('addComment increments', state.comments.length === 3);
-
-        // cleanup: restore 2
-        state.comments.splice(2, 1);
-        renderComments();
-        assert('cleanup back to 2', state.comments.length === 2);
-
-        console.table(results);
-      }
-
-      // 초기 로드
-      seedComments();
-      renderComments();
-      runTests();
+      initFirebase();
     })();
   </script>
 </body>

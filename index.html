@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>모바일 뉴스</title>
+  <title>keeung news</title>
 
-  <!-- ================== STYLE ================== -->
   <style>
     /* ---------- Base ---------- */
     body {
@@ -22,6 +21,7 @@
       aspect-ratio: 9 / 16;
       background: #f2f3f5;
       overflow-y: auto;
+      position: relative;
     }
 
     /* ---------- Header ---------- */
@@ -55,8 +55,9 @@
       color: #E38Cb2;
       background: rgba(227, 140, 178, 0.12);
       border-radius: 999px;
-      transition: all 0.25s ease;
+      transition: transform 0.25s ease, opacity 0.25s ease;
       transform-origin: left center;
+      z-index: 1;
     }
 
     .category-badge.shrink {
@@ -91,43 +92,28 @@
     .article-actions button {
       font-size: 12px;
       padding: 6px 10px;
-      border-radius: 6px;
+      border-radius: 8px;
       border: 1px solid #ddd;
       background: #fff;
       cursor: pointer;
     }
 
-    figure.image {
-      position: relative;
-      margin: -16px -16px 16px; /* 좌우 풀폭 */
+    /* ---------- ELLE Image ---------- */
+    .article-figure {
+      margin: -16px -16px 16px;
     }
 
-    
-
-    .image-overlay {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      padding: 16px;
-      background: linear-gradient(to top, rgba(0,0,0,0.55), rgba(0,0,0,0));
-      color: #fff;
-    }
-
-    .image-overlay h1 {
-      font-size: 20px;
-      line-height: 1.4;
-      margin: 0;
-      font-weight: 700;
-    }
-
-    figure.image img {
+    .article-figure img {
       width: 100%;
+      max-height: 520px; /* 얼굴이 더 잘 보이도록 세로를 더 길게 */
+      object-fit: cover;
+      object-position: 50% 20%; /* 윗부분(얼굴) 쪽을 더 보여주기 */
+      display: block;
       border-radius: 8px;
     }
 
-    figcaption {
-      margin-top: 6px;
+    .article-figure figcaption {
+      padding: 8px 16px;
       font-size: 12px;
       color: #999;
     }
@@ -143,39 +129,6 @@
       font-weight: 600;
     }
 
-    /* ---------- ELLE Image ---------- */
-    .article-figure {
-      margin: -16px -16px 16px;
-    }
-
-    .article-figure img {
-      width: 100%;
-      height: auto;
-      aspect-ratio: 3 / 4;
-      object-fit: cover;
-      display: block;
-    }
-
-    .article-figure figcaption {
-      padding: 8px 16px;
-      font-size: 12px;
-      color: #999;
-    }
-
-    .highlight {
-      color: #E38Cb2;
-      font-weight: 600;
-    }
-
-    .highlight-quote {
-      border-left: 4px solid #E38Cb2;
-      background: rgba(227, 140, 178, 0.08);
-      padding: 12px;
-      margin: 16px 0;
-      font-size: 14px;
-      font-weight: 500;
-    }
-
     /* ---------- Bottom Nav ---------- */
     nav {
       position: sticky;
@@ -186,6 +139,7 @@
       justify-content: space-around;
       padding: 8px 0;
       font-size: 12px;
+      z-index: 5;
     }
 
     nav div {
@@ -216,7 +170,7 @@
       transform: translateX(-50%);
       bottom: -100%;
       width: 100%;
-      max-width: 414px;
+      max-width: 480px; /* 댓글 UI 가로 폭 확대 */
       height: 70%;
       background: #fff;
       border-radius: 16px 16px 0 0;
@@ -225,6 +179,7 @@
       z-index: 20;
       display: flex;
       flex-direction: column;
+      will-change: transform;
     }
 
     .comment-sheet.open { bottom: 0; }
@@ -233,7 +188,24 @@
       padding: 12px;
       font-weight: 700;
       border-bottom: 1px solid #eee;
-      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .comment-header .left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .comment-header select {
+      font-size: 12px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      background: #fff;
     }
 
     .comment-list {
@@ -244,12 +216,60 @@
     }
 
     .comment {
-      margin-bottom: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid #f1f1f1;
     }
 
-    .comment strong {
-      display: block;
+    .comment-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .comment-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .comment-meta strong {
+      display: inline-block;
       font-size: 13px;
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .comment-time {
+      font-size: 12px;
+      color: #999;
+      white-space: nowrap;
+    }
+
+    .comment-text {
+      font-size: 14px;
+      color: #333;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .comment-actions {
+      display: flex;
+      gap: 6px;
+      flex: 0 0 auto;
+    }
+
+    .comment-actions button {
+      font-size: 12px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid #e6e6e6;
+      background: #fff;
+      cursor: pointer;
     }
 
     .comment-input {
@@ -257,12 +277,24 @@
       gap: 6px;
       padding: 10px;
       border-top: 1px solid #eee;
+      flex-wrap: wrap;
     }
 
     .comment-input input {
-      flex: 1;
       padding: 8px;
       font-size: 14px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+
+    #nicknameInput {
+      width: 92px;
+      flex: 0 0 auto;
+    }
+
+    #commentInput {
+      flex: 1 1 180px;
+      min-width: 160px;
     }
 
     .comment-input button {
@@ -270,17 +302,19 @@
       color: #fff;
       border: none;
       padding: 8px 12px;
-      border-radius: 6px;
+      border-radius: 8px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
 
-  <div class="container">
-    <header>뉴스</header>
+  <!-- ✅ JS에서 찾는 id를 실제로 부여 -->
+  <div class="container" id="container">
+    <header>keeung news</header>
 
     <article class="article-detail">
-      <div class="category-badge">연예</div>
+      <div class="category-badge" id="badge">연예</div>
 
       <h1 class="title">윤기호와 최지웅, 아이돌 그룹 내 연인으로.. 열애 인정</h1>
 
@@ -290,47 +324,44 @@
       </div>
 
       <div class="article-actions">
-        <button onclick="openComments()">댓글</button>
+        <button type="button" onclick="openComments()">댓글</button>
       </div>
-
-      
 
       <div class="article-content">
-
         <figure class="article-figure">
-          <img src="news-photo.jpg" alt="P1Harmony 멤버 화보 이미지">
+          <img src="news-photo.jpg" alt="P1Harmony 멤버 화보 이미지" />
           <figcaption>ⓒ ELLE</figcaption>
         </figure>
-  <p>최근 아이돌 팬들에게 큰 소식을 전해준 두 남자 아이돌(P1Harmony) 윤기호와 최지웅이 같은 그룹 내에서 연인으로 발전한 사실을 공식적으로 인정했다. 그들의 사랑 이야기는 많은 팬들을 설레게 하며 뜨거운 관심을 모으고 있다.</p>
 
-  <p>이번 열애 인정은 소속사(FNC)에서 공식 보도자료를 통해 발표되었으며, "기호와 지웅은 서로에 대한 깊은 신뢰와 애정을 바탕으로 연인 관계로 발전하게 되었다"는 내용이 포함되어 있었다. 이들은 같은 아이돌 그룹에 속해 있는 만큼, 팬들과의 소통과 활동에도 변별력을 줄 것으로 기대된다.</p>
-
-  <p>윤기호는 그룹의 메인 보컬로, 특유의 감성적인 목소리로 팬들의 사랑을 받아왔다. 최지웅은 댄스와 퍼포먼스에 뛰어난 실력을 보이며 그룹의 매력을 한층 끌어올리는 역할을 하고 있다. 두 사람은 그룹 활동에 있어서도 서로를 응원하며 친구 같은 관계에서 연인으로 발전하게 된 것으로 알려졌다.</p>
-
-  <p>P1Harmony 열렬한 팬인 김정배씨(여/26세)는 "처음 두 사람의 관계를 알게 되었을 때 매우 기뻤다. 두 사람 모두 너무 잘 어울린다"며, 이들의 사랑을 응원했다. 반면, 일부 팬들은 "연애 소식이 듣고 싶지 않았다"며 아쉬운 마음을 드러내기도 했다. 팬들의 반응이 상반되면서, 이들의 연애가 팬덤 내에서 새로운 화제를 불러일으키고 있다.</p>
-
-  <p>소속사 측은 "팬들의 이해와 응원을 부탁드린다"며, 앞으로의 활동에 대한 기대감을 드러냈다. 이들은 현재 앨범 준비와 함께 다양한 콘텐츠를 통해 팬들과 소통할 계획이다. 또한, 연애 사실이 공개된 이후에도 그룹의 활동에 지장이 없도록 최선을 다할 것이라고 밝혔다.</p>
-
-  <p>P1Harmony의 기호와 지웅의 연애는 단순한 개인적인 관계를 넘어, 국내 처음으로 아이돌 그룹 내에서의 사랑의 시작으로 많은 이들에게 영감을 주고 있다. 그들의 사랑은 팬들에게도 애정 어린 응원과 지지를 받을 수 있는 특별한 이야기가 될 것이며 앞으로의 컴백이 더욱 기대되는 이유가 된다.</p>
-
-  <p>아이돌 그룹 내에서의 연애는 늘 팬들에게 다양한 반응을 불러일으키는 주제이다. 기호와 지웅의 사랑 이야기는 그들의 음악과 매력을 더욱 빛나게 할 것으로 예상된다. 팬들은 이들의 연애를 통해 새로운 시너지를 기대하며 더욱 뜨거운 응원을 보내고 있다. 앞으로 이들의 행보가 어떻게 펼쳐질지 많은 이들이 저마다의 마음으로 지켜보게 될 것이다.</p>
-</div>
-
+        <p>최근 아이돌 팬들에게 큰 소식을 전해준 두 남자 아이돌(P1Harmony) 윤기호와 최지웅이 같은 그룹 내에서 연인으로 발전한 사실을 공식적으로 인정했다. 그들의 사랑 이야기는 많은 팬들을 설레게 하며 뜨거운 관심을 모으고 있다.</p>
+        <p>이번 열애 인정은 소속사(FNC)에서 공식 보도자료를 통해 발표되었으며, "기호와 지웅은 서로에 대한 깊은 신뢰와 애정을 바탕으로 연인 관계로 발전하게 되었다"는 내용이 포함되어 있었다. 이들은 같은 아이돌 그룹에 속해 있는 만큼, 팬들과의 소통과 활동에도 변별력을 줄 것으로 기대된다.</p>
+        <p>윤기호는 그룹의 메인 보컬로, 특유의 감성적인 목소리로 팬들의 사랑을 받아왔다. 최지웅은 댄스와 퍼포먼스에 뛰어난 실력을 보이며 그룹의 매력을 한층 끌어올리는 역할을 하고 있다. 두 사람은 그룹 활동에 있어서도 서로를 응원하며 친구 같은 관계에서 연인으로 발전하게 된 것으로 알려졌다.</p>
+        <p>P1Harmony 열렬한 팬인 김정배씨는 "처음 두 사람의 관계를 알게 되었을 때 매우 기뻤다. 두 사람 모두 너무 잘 어울린다"며, 이들의 사랑을 응원했다. 반면, 일부 팬들은 "연애 소식이 듣고 싶지 않았다"며 아쉬운 마음을 드러내기도 했다. 팬들의 반응이 상반되면서, 이들의 연애가 팬덤 내에서 새로운 화제를 불러일으키고 있다.</p>
+        <p>소속사 측은 "팬들의 이해와 응원을 부탁드린다"며, 앞으로의 활동에 대한 기대감을 드러냈다. 이들은 현재 앨범 준비와 함께 다양한 콘텐츠를 통해 팬들과 소통할 계획이다. 또한, 연애 사실이 공개된 이후에도 그룹의 활동에 지장이 없도록 최선을 다할 것이라고 밝혔다.</p>
+        <p>P1Harmony의 기호와 지웅의 연애는 단순한 개인적인 관계를 넘어, 국내 처음으로 아이돌 그룹 내에서의 사랑의 시작으로 많은 이들에게 영감을 주고 있다. 그들의 사랑은 팬들에게도 애정 어린 응원과 지지를 받을 수 있는 특별한 이야기가 될 것이며 앞으로의 컴백이 더욱 기대되는 이유가 된다.</p>
+        <p>아이돌 그룹 내에서의 연애는 늘 팬들에게 다양한 반응을 불러일으키는 주제이다. 기호와 지웅의 사랑 이야기는 그들의 음악과 매력을 더욱 빛나게 할 것으로 예상된다. 팬들은 이들의 연애를 통해 새로운 시너지를 기대하며 더욱 뜨거운 응원을 보내고 있다. 앞으로 이들의 행보가 어떻게 펼쳐질지 많은 이들이 저마다의 마음으로 지켜보게 될 것이다.</p>
+      </div>
     </article>
 
-    <!-- Dim Overlay -->
-    <div class="dim" onclick="closeComments()"></div>
+    <!-- ✅ JS에서 찾는 id를 실제로 부여 -->
+    <div class="dim" id="dim" onclick="closeComments()"></div>
 
-    <!-- Comment Sheet -->
-    <div class="comment-sheet" id="commentSheet" ontouchstart="startDrag(event)" ontouchmove="onDrag(event)" ontouchend="endDrag()">
-      <div class="comment-header">댓글 2</div>
-      <div class="comment-list">
-        <div class="comment"><strong>무</strong>두 분의 사랑을 응원합니다!</div>
-        <div class="comment"><strong>베베</strong>미쳤다.. 기호 지웅 화이팅!</div>
+    <div class="comment-sheet" id="commentSheet"
+         ontouchstart="startDrag(event)" ontouchmove="onDrag(event)" ontouchend="endDrag()">
+      <div class="comment-header">
+        <div class="left">댓글 <span id="commentCount">2</span></div>
+        <select id="sortOrder" aria-label="정렬">
+          <option value="latest" selected>최신순</option>
+          <option value="oldest">오래된순</option>
+        </select>
       </div>
+
+      <div class="comment-list" id="commentList"></div>
+
       <div class="comment-input">
-        <input type="text" placeholder="댓글을 입력하세요" />
-        <button>등록</button>
+        <input id="nicknameInput" type="text" placeholder="닉네임" maxlength="12" />
+        <input id="commentInput" type="text" placeholder="댓글을 입력하세요" />
+        <button id="commentSubmit" type="button">등록</button>
       </div>
     </div>
 
@@ -339,51 +370,259 @@
       <div>뉴스</div>
       <div>마이</div>
     </nav>
-
   </div>
 
-<script>
-  function openComments() {
-    document.getElementById('commentSheet').classList.add('open');
-    document.querySelector('.dim').classList.add('show');
-  }
+  <script>
+    // DOM 준비 후 실행 + 전역 함수(window)에 확실히 등록
+    (function () {
+      const container = document.getElementById('container');
+      const badge = document.getElementById('badge');
+      const sheet = document.getElementById('commentSheet');
+      const dim = document.getElementById('dim');
 
-  function closeComments() {
-    document.getElementById('commentSheet').classList.remove('open');
-    document.querySelector('.dim').classList.remove('show');
-  }
-  let startY = 0;
-  let currentY = 0;
+      // ====== Bottom Sheet Open/Close (global) ======
+      window.openComments = function openComments() {
+        sheet.classList.add('open');
+        dim.classList.add('show');
+      };
 
-  function startDrag(e) {
-    startY = e.touches[0].clientY;
-  }
+      window.closeComments = function closeComments() {
+        sheet.classList.remove('open');
+        dim.classList.remove('show');
+        sheet.style.transform = 'translateX(-50%)';
+      };
 
-  function onDrag(e) {
-    currentY = e.touches[0].clientY;
-    const diff = currentY - startY;
-    if (diff > 0) {
-      document.getElementById('commentSheet').style.transform = `translate(-50%, ${diff}px)`;
-    }
-  }
+      // ====== Swipe Down to Close (global) ======
+      let startY = 0;
+      let currentY = 0;
 
-  function endDrag() {
-    const diff = currentY - startY;
-    const sheet = document.getElementById('commentSheet');
-    if (diff > 120) {
-      closeComments();
-    }
-    sheet.style.transform = 'translateX(-50%)';
-  }
+      window.startDrag = function startDrag(e) {
+        startY = e.touches[0].clientY;
+        currentY = startY;
+      };
 
-  const input = document.querySelector('.comment-input input');
-  input.addEventListener('focus', () => {
-    document.getElementById('commentSheet').style.height = '85%';
-  });
+      window.onDrag = function onDrag(e) {
+        currentY = e.touches[0].clientY;
+        const diff = currentY - startY;
+        if (diff > 0) sheet.style.transform = `translate(-50%, ${diff}px)`;
+      };
 
-  input.addEventListener('blur', () => {
-    document.getElementById('commentSheet').style.height = '70%';
-  });
-</script>
+      window.endDrag = function endDrag() {
+        const diff = currentY - startY;
+        if (diff > 120) window.closeComments();
+        else sheet.style.transform = 'translateX(-50%)';
+        startY = 0;
+        currentY = 0;
+      };
+
+      // ====== Category badge shrink on scroll ======
+      container.addEventListener('scroll', () => {
+        if (container.scrollTop > 40) badge.classList.add('shrink');
+        else badge.classList.remove('shrink');
+      });
+
+      // ====== Comment System ======
+      const commentList = document.getElementById('commentList');
+      const commentCountEl = document.getElementById('commentCount');
+      const nicknameInput = document.getElementById('nicknameInput');
+      const commentInput = document.getElementById('commentInput');
+      const commentSubmit = document.getElementById('commentSubmit');
+      const sortOrder = document.getElementById('sortOrder');
+
+      const state = { order: 'latest', comments: [] };
+
+      function formatRelativeTime(ts) {
+        const diff = Date.now() - ts;
+        const sec = Math.floor(diff / 1000);
+        if (sec < 30) return '방금 전';
+        if (sec < 60) return '1분 전';
+        const min = Math.floor(sec / 60);
+        if (min < 60) return `${min}분 전`;
+        const hr = Math.floor(min / 60);
+        if (hr < 24) return `${hr}시간 전`;
+        const day = Math.floor(hr / 24);
+        return `${day}일 전`;
+      }
+
+      function updateCommentCount() {
+        commentCountEl.textContent = String(state.comments.length);
+      }
+
+      function renderComments() {
+        commentList.innerHTML = '';
+
+        const sorted = [...state.comments].sort((a, b) =>
+          state.order === 'latest' ? (b.ts - a.ts) : (a.ts - b.ts)
+        );
+
+        for (const c of sorted) {
+          const item = document.createElement('div');
+          item.className = 'comment';
+          item.dataset.id = c.id;
+          item.dataset.ts = String(c.ts);
+
+          const top = document.createElement('div');
+          top.className = 'comment-top';
+
+          const meta = document.createElement('div');
+          meta.className = 'comment-meta';
+
+          const name = document.createElement('strong');
+          name.textContent = c.name;
+
+          const time = document.createElement('span');
+          time.className = 'comment-time';
+          time.textContent = formatRelativeTime(c.ts);
+
+          meta.appendChild(name);
+          meta.appendChild(time);
+
+          const actions = document.createElement('div');
+          actions.className = 'comment-actions';
+
+          const editBtn = document.createElement('button');
+          editBtn.type = 'button';
+          editBtn.dataset.action = 'edit';
+          editBtn.textContent = '수정';
+
+          const delBtn = document.createElement('button');
+          delBtn.type = 'button';
+          delBtn.dataset.action = 'delete';
+          delBtn.textContent = '삭제';
+
+          actions.appendChild(editBtn);
+          actions.appendChild(delBtn);
+
+          top.appendChild(meta);
+          top.appendChild(actions);
+
+          const text = document.createElement('div');
+          text.className = 'comment-text';
+          text.textContent = c.text;
+
+          item.appendChild(top);
+          item.appendChild(text);
+          commentList.appendChild(item);
+        }
+
+        updateCommentCount();
+        commentList.scrollTop = (state.order === 'latest') ? 0 : commentList.scrollHeight;
+      }
+
+      function seedComments() {
+        state.comments = [
+          { id: 'seed_0', name: '무', text: '두 분의 사랑을 응원합니다!', ts: Date.now() - 2 * 60 * 1000 },
+          { id: 'seed_1', name: '베베', text: '미쳤다.. 기호 지웅 화이팅!', ts: Date.now() - 1 * 60 * 1000 }
+        ];
+      }
+
+      function addComment() {
+        const name = (nicknameInput.value || '').trim() || '익명';
+        const text = (commentInput.value || '').trim();
+        if (!text) return;
+
+        state.comments.push({
+          id: `c_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+          name,
+          text,
+          ts: Date.now()
+        });
+
+        commentInput.value = '';
+        renderComments();
+      }
+
+      commentList.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+
+        const item = btn.closest('.comment');
+        if (!item) return;
+
+        const id = item.dataset.id;
+        const idx = state.comments.findIndex(c => c.id === id);
+        if (idx < 0) return;
+
+        const action = btn.dataset.action;
+        if (action === 'delete') {
+          state.comments.splice(idx, 1);
+          renderComments();
+          return;
+        }
+
+        if (action === 'edit') {
+          const current = state.comments[idx].text;
+          const next = prompt('댓글 수정', current);
+          if (next === null) return;
+          const trimmed = String(next).trim();
+          if (!trimmed) return;
+          state.comments[idx].text = trimmed;
+          renderComments();
+        }
+      });
+
+      sortOrder.addEventListener('change', () => {
+        state.order = sortOrder.value;
+        renderComments();
+      });
+
+      commentSubmit.addEventListener('click', addComment);
+      commentInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') addComment();
+      });
+
+      commentInput.addEventListener('focus', () => {
+        sheet.style.height = '85%';
+      });
+
+      commentInput.addEventListener('blur', () => {
+        sheet.style.height = '70%';
+      });
+
+      setInterval(() => {
+        document.querySelectorAll('.comment').forEach(el => {
+          const ts = Number(el.dataset.ts || 0);
+          const timeEl = el.querySelector('.comment-time');
+          if (timeEl && ts) timeEl.textContent = formatRelativeTime(ts);
+        });
+      }, 30000);
+
+      // ====== Tests (console) ======
+      function runTests() {
+        const results = [];
+        const assert = (name, cond) => results.push({ name, pass: Boolean(cond) });
+
+        assert('#container exists', !!container);
+        assert('#badge exists', !!badge);
+        assert('#dim exists', !!dim);
+        assert('openComments defined', typeof window.openComments === 'function');
+        assert('closeComments defined', typeof window.closeComments === 'function');
+
+        // seed + render
+        const before = state.comments.length;
+        seedComments();
+        renderComments();
+        assert('seedComments adds 2', state.comments.length === 2);
+
+        // addComment increases count
+        nicknameInput.value = '닉네임 입력';
+        commentInput.value = '테스트 댓글';
+        addComment();
+        assert('addComment increments', state.comments.length === 3);
+
+        // cleanup: restore 2
+        state.comments.splice(2, 1);
+        renderComments();
+        assert('cleanup back to 2', state.comments.length === 2);
+
+        console.table(results);
+      }
+
+      // 초기 로드
+      seedComments();
+      renderComments();
+      runTests();
+    })();
+  </script>
 </body>
 </html>

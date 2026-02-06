@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>모바일 뉴스</title>
+
+  <!-- ================== STYLE ================== -->
+  <style>
+    /* ---------- Base ---------- */
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      background: #000;
+      display: flex;
+      justify-content: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 414px; /* iPhone 기준 */
+      aspect-ratio: 9 / 16;
+      background: #f2f3f5;
+      overflow-y: auto;
+    }
+
+    /* ---------- Header ---------- */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: #E38Cb2;
+      color: #fff;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+      padding: 12px 0;
+      border-radius: 0 0 16px 16px;
+    }
+
+    /* ---------- Article ---------- */
+    .article-detail {
+      background: #fff;
+      padding: 16px; /* 8px grid x2 */
+    }
+
+    .category-badge {
+      position: sticky;
+      top: 48px; /* header 아래 */
+      display: inline-block;
+      margin-bottom: 8px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #E38Cb2;
+      background: rgba(227, 140, 178, 0.12);
+      border-radius: 999px;
+      transition: all 0.25s ease;
+      transform-origin: left center;
+    }
+
+    .category-badge.shrink {
+      transform: scale(0.85);
+      opacity: 0.9;
+    }
+
+    .title {
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.4;
+      margin: 8px 0 6px;
+    }
+
+    .article-meta {
+      font-size: 12px;
+      color: #777;
+      margin-bottom: 12px;
+    }
+
+    .article-meta span + span::before {
+      content: "·";
+      margin: 0 6px;
+    }
+
+    .article-actions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .article-actions button {
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid #ddd;
+      background: #fff;
+      cursor: pointer;
+    }
+
+    figure.image {
+      position: relative;
+      margin: -16px -16px 16px; /* 좌우 풀폭 */
+    }
+
+    figure.image img {
+      width: 100%;
+      height: 240px;
+      object-fit: cover;
+      border-radius: 0;
+    }
+
+    .image-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 16px;
+      background: linear-gradient(to top, rgba(0,0,0,0.55), rgba(0,0,0,0));
+      color: #fff;
+    }
+
+    .image-overlay h1 {
+      font-size: 20px;
+      line-height: 1.4;
+      margin: 0;
+      font-weight: 700;
+    }
+
+    figure.image img {
+      width: 100%;
+      border-radius: 8px;
+    }
+
+    figcaption {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #999;
+    }
+
+    .article-content p {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #333;
+      margin-bottom: 16px;
+    }
+
+    .article-content p:first-of-type {
+      font-weight: 600; /* 네이버식 첫 문단 강조 */
+    }
+
+    .highlight {
+      color: #E38Cb2;
+      font-weight: 600;
+    }
+
+    .highlight-quote {
+      border-left: 4px solid #E38Cb2;
+      background: rgba(227, 140, 178, 0.08);
+      padding: 12px;
+      margin: 16px 0;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    /* ---------- Bottom Nav ---------- */
+    nav {
+      position: sticky;
+      bottom: 0;
+      background: #fff;
+      border-top: 1px solid #ddd;
+      display: flex;
+      justify-content: space-around;
+      padding: 8px 0;
+      font-size: 12px;
+    }
+
+    nav div {
+      color: #666;
+    }
+
+    /* ---------- Dim Overlay ---------- */
+    .dim {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.35);
+      backdrop-filter: blur(6px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      z-index: 15;
+    }
+
+    .dim.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* ---------- Comment Sheet ---------- */
+    .comment-sheet {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: -100%;
+      width: 100%;
+      max-width: 414px;
+      height: 70%;
+      background: #fff;
+      border-radius: 16px 16px 0 0;
+      box-shadow: 0 -4px 10px rgba(0,0,0,0.2);
+      transition: bottom 0.3s ease;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .comment-sheet.open { bottom: 0; }
+
+    .comment-header {
+      padding: 12px;
+      font-weight: 700;
+      border-bottom: 1px solid #eee;
+      text-align: center;
+    }
+
+    .comment-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      font-size: 14px;
+    }
+
+    .comment {
+      margin-bottom: 12px;
+    }
+
+    .comment strong {
+      display: block;
+      font-size: 13px;
+    }
+
+    .comment-input {
+      display: flex;
+      gap: 6px;
+      padding: 10px;
+      border-top: 1px solid #eee;
+    }
+
+    .comment-input input {
+      flex: 1;
+      padding: 8px;
+      font-size: 14px;
+    }
+
+    .comment-input button {
+      background: #E38Cb2;
+      color: #fff;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>뉴스</header>
+
+    <article class="article-detail">
+      <div class="category-badge">연예</div>
+
+      <h1 class="title">윤기호와 최지웅, 아이돌 그룹 내 연인으로.. 열애 인정</h1>
+
+      <div class="article-meta">
+        <span class="press">이내뉴스</span>
+        <span class="date">2026.09.27 10:07</span>
+      </div>
+
+      <div class="article-actions">
+        <button>공유</button>
+        <button onclick="openComments()">댓글</button>
+        <button>글자+</button>
+      </div>
+
+      <figure class="image">
+  <img src="images/news-photo.jpg" alt="P1Harmony 윤기호 최지웅 화보 이미지" />
+  <div class="image-overlay">
+    <h1>윤기호와 최지웅, 아이돌 그룹 내 연인으로.. 열애 인정</h1>
+  </div>
+  <figcaption style="padding: 8px 16px;">자료사진 ⓒ이내뉴스</figcaption>
+</figure>
+
+      <div class="article-content">
+  <p>최근 아이돌 팬들에게 큰 소식을 전해준 두 남자 아이돌(P1Harmony) 윤기호와 최지웅이 같은 그룹 내에서 연인으로 발전한 사실을 공식적으로 인정했다. 그들의 사랑 이야기는 많은 팬들을 설레게 하며 뜨거운 관심을 모으고 있다.</p>
+
+  <p>이번 열애 인정은 소속사(FNC)에서 공식 보도자료를 통해 발표되었으며, "기호와 지웅은 서로에 대한 깊은 신뢰와 애정을 바탕으로 연인 관계로 발전하게 되었다"는 내용이 포함되어 있었다. 이들은 같은 아이돌 그룹에 속해 있는 만큼, 팬들과의 소통과 활동에도 변별력을 줄 것으로 기대된다.</p>
+
+  <p>윤기호는 그룹의 메인 보컬로, 특유의 감성적인 목소리로 팬들의 사랑을 받아왔다. 최지웅은 댄스와 퍼포먼스에 뛰어난 실력을 보이며 그룹의 매력을 한층 끌어올리는 역할을 하고 있다. 두 사람은 그룹 활동에 있어서도 서로를 응원하며 친구 같은 관계에서 연인으로 발전하게 된 것으로 알려졌다.</p>
+
+  <p>P1Harmony 열렬한 팬인 김정배씨(여/26세)는 "처음 두 사람의 관계를 알게 되었을 때 매우 기뻤다. 두 사람 모두 너무 잘 어울린다"며, 이들의 사랑을 응원했다. 반면, 일부 팬들은 "연애 소식이 듣고 싶지 않았다"며 아쉬운 마음을 드러내기도 했다. 팬들의 반응이 상반되면서, 이들의 연애가 팬덤 내에서 새로운 화제를 불러일으키고 있다.</p>
+
+  <p>소속사 측은 "팬들의 이해와 응원을 부탁드린다"며, 앞으로의 활동에 대한 기대감을 드러냈다. 이들은 현재 앨범 준비와 함께 다양한 콘텐츠를 통해 팬들과 소통할 계획이다. 또한, 연애 사실이 공개된 이후에도 그룹의 활동에 지장이 없도록 최선을 다할 것이라고 밝혔다.</p>
+
+  <p>P1Harmony의 기호와 지웅의 연애는 단순한 개인적인 관계를 넘어, 국내 처음으로 아이돌 그룹 내에서의 사랑의 시작으로 많은 이들에게 영감을 주고 있다. 그들의 사랑은 팬들에게도 애정 어린 응원과 지지를 받을 수 있는 특별한 이야기가 될 것이며 앞으로의 컴백이 더욱 기대되는 이유가 된다.</p>
+
+  <p>아이돌 그룹 내에서의 연애는 늘 팬들에게 다양한 반응을 불러일으키는 주제이다. 기호와 지웅의 사랑 이야기는 그들의 음악과 매력을 더욱 빛나게 할 것으로 예상된다. 팬들은 이들의 연애를 통해 새로운 시너지를 기대하며 더욱 뜨거운 응원을 보내고 있다. 앞으로 이들의 행보가 어떻게 펼쳐질지 많은 이들이 저마다의 마음으로 지켜보게 될 것이다.</p>
+</div>
+
+    </article>
+
+    <!-- Dim Overlay -->
+    <div class="dim" onclick="closeComments()"></div>
+
+    <!-- Comment Sheet -->
+    <div class="comment-sheet" id="commentSheet" ontouchstart="startDrag(event)" ontouchmove="onDrag(event)" ontouchend="endDrag()">
+      <div class="comment-header">댓글 2</div>
+      <div class="comment-list">
+        <div class="comment"><strong>무</strong>두 분의 사랑을 응원합니다!</div>
+        <div class="comment"><strong>베베</strong>미쳤다.. 기호 지웅 화이팅!</div>
+      </div>
+      <div class="comment-input">
+        <input type="text" placeholder="댓글을 입력하세요" />
+        <button>등록</button>
+      </div>
+    </div>
+
+    <nav>
+      <div>홈</div>
+      <div>뉴스</div>
+      <div>마이</div>
+    </nav>
+
+  </div>
+
+<script>
+  function openComments() {
+    document.getElementById('commentSheet').classList.add('open');
+    document.querySelector('.dim').classList.add('show');
+  }
+
+  function closeComments() {
+    document.getElementById('commentSheet').classList.remove('open');
+    document.querySelector('.dim').classList.remove('show');
+  }
+  let startY = 0;
+  let currentY = 0;
+
+  function startDrag(e) {
+    startY = e.touches[0].clientY;
+  }
+
+  function onDrag(e) {
+    currentY = e.touches[0].clientY;
+    const diff = currentY - startY;
+    if (diff > 0) {
+      document.getElementById('commentSheet').style.transform = `translate(-50%, ${diff}px)`;
+    }
+  }
+
+  function endDrag() {
+    const diff = currentY - startY;
+    const sheet = document.getElementById('commentSheet');
+    if (diff > 120) {
+      closeComments();
+    }
+    sheet.style.transform = 'translateX(-50%)';
+  }
+
+  const input = document.querySelector('.comment-input input');
+  input.addEventListener('focus', () => {
+    document.getElementById('commentSheet').style.height = '85%';
+  });
+
+  input.addEventListener('blur', () => {
+    document.getElementById('commentSheet').style.height = '70%';
+  });
+</script>
+</body>
+</html>
